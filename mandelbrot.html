@@ -17,6 +17,7 @@
 
 
 <script>
+	//Constructor
 	function FractalGenerator()
 	{
 		this.xMax = 2;
@@ -27,6 +28,7 @@
 		this.selectPosition = {"left": 0, "top": 0};
 	}
 	
+	//Reset the graph limits and offset
 	FractalGenerator.prototype.reset = function()
 	{
 		this.xMax = 2;
@@ -35,12 +37,14 @@
 		this.yOff = 0;
 	}
 	
+	//Double the limits of the graphbut keep theoffset
 	FractalGenerator.prototype.zoomOut = function()
 	{
 		this.xMax *= 2;
 		this.yMax *= 2;
 	}
 	
+	//Draw the fractal with the current offset and graph limits onto canvasElem
 	FractalGenerator.prototype.drawFractal = function(canvasElem)
 	{
 		var ctx = canvasElem.getContext("2d");
@@ -71,6 +75,7 @@
 			}
 		}
 		
+		//Show the crosshairs to highlight the center of the canvas
 		if (this.crosshairsOn)
 		{
 			ctx.strokeStyle = "red";
@@ -85,6 +90,7 @@
 		}
 	}
 
+	//Calculate the next iteration of z given the previous value of z and a position on the complex plane c
 	FractalGenerator.prototype.mandelIter = function(z, c)
 	{
 		var zSqr = this.multComp(z, z);
@@ -92,6 +98,9 @@
 		return total;
 	}
 	
+	//Run the mandelIter on a given position c 256 times.
+	//If it diverges (grows larger than 2) then return the number of iterations it took to diverge
+	//Otherwise return 256 which indicates that it did not converge within those number of iterations
 	FractalGenerator.prototype.convergeLevel = function(c)
 	{
 		var z = [0, 0];
@@ -105,6 +114,9 @@
 		return 256;
 	}
 	
+	//Add two complex values and return a complex value
+	//Complex values are represented by a array of length 2
+	//The first value is real the second value is imaginary
 	FractalGenerator.prototype.addComp = function(z1, z2)
 	{
 		zr = [0, 0];
@@ -113,6 +125,7 @@
 		return zr;
 	}
 	
+	//Multiply two complex values and return a complex value
 	FractalGenerator.prototype.multComp = function(z1, z2)
 	{
 		var realPart = z1[0]*z2[0] - z1[1]*z2[1];
@@ -120,6 +133,7 @@
 		return [realPart, imagPart];
 	}
 	
+	//Return the absolute value of a given complex value z
 	FractalGenerator.prototype.compAbs = function(z)
 	{
 		return Math.sqrt(z[0]*z[0] + z[1]*z[1]);
@@ -142,6 +156,7 @@
 		setTimeout(drawFractal, 100);
 	}
 	
+	//Drawing the fractal takes a while so show a loading image
 	function showLoading()
 	{
 		var mandelPos = $("#mandelCanvas").position();
@@ -161,6 +176,9 @@
 		setTimeout(drawFractal, 100);
 	});
 	
+	//If we click on the canvas then zoom in
+	//Zooming in is done by reducing the graph limits by half
+	//and changing the offset
 	mandelElem = document.getElementById("mandelCanvas");
 	mandelElem.addEventListener('click', function(event){
 		var rect = mandelElem.getBoundingClientRect();
@@ -168,16 +186,22 @@
 		var y = event.clientY - rect.top - 2;
 		
 		var ctx = mandelElem.getContext("2d");
+		//First we calculate the offset from the middle of the canvas rX, rY
 		var rX = x - mandelElem.clientWidth/2;
-		var trueX = rX / mandelElem.clientWidth * 2 * fractal.xMax;
 		var rY = y - mandelElem.clientHeight/2;
+		//Then we normalize the distance from the center by dividing by the size of the canvas
+		//Then we multiply by the size of the window (2*xMax, 2*yMax)
+		//This gives us an offset in absolute terms not in reference to the current window
+		var trueX = rX / mandelElem.clientWidth * 2 * fractal.xMax;
 		var trueY = rY / mandelElem.clientHeight * 2 * fractal.yMax;
 		
+		//Cut the window limits in half and add the absolute offset to the current offset
 		fractal.xMax /= 2;
 		fractal.yMax /= 2;
 		fractal.xOff += trueX;
 		fractal.yOff += trueY;
 		showLoading();
+		//We wait to draw the fractal otherwise the loading screen won't show up
 		setTimeout(drawFractal, 100);
 	});
 </script>
