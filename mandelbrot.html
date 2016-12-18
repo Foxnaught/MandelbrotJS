@@ -1,0 +1,186 @@
+<script src="jquery-3.1.0.min.js"></script>
+<h3>
+	Mandelbrot Fractal - Click To Zoom In
+</h3>
+<div id="fractalLoader" style="opacity:.8;text-align:center;display:none;height:600px;width:600px;font-size:26px;font-weight:bold;background-color:#000;color:#CCC;position:absolute;float:left;z-index:10000;">
+	<span style="display:inline-block;position:relative;top:250px;">
+		LOADING...
+	</span>
+</div>
+
+<div>
+	<canvas id="mandelCanvas" width=600 height=600 style="border:1px solid black;"></canvas>
+</div>
+<input type="button" value="Reset" onclick="reset();" />
+<input type="button" value="Zoom Out" onclick="zoomOut();" />
+<input type="button" value="Toggle Crosshairs" onclick="fractal.crosshairsOn=!fractal.crosshairsOn;fractal.drawFractal(document.getElementById('mandelCanvas'));" />
+
+
+<script>
+	function FractalGenerator()
+	{
+		this.xMax = 2;
+		this.yMax = 2;
+		this.xOff = 0;
+		this.yOff = 0;
+		this.crosshairsOn = false;
+		this.selectPosition = {"left": 0, "top": 0};
+	}
+	
+	FractalGenerator.prototype.reset = function()
+	{
+		this.xMax = 2;
+		this.yMax = 2;
+		this.xOff = 0;
+		this.yOff = 0;
+	}
+	
+	FractalGenerator.prototype.zoomOut = function()
+	{
+		this.xMax *= 2;
+		this.yMax *= 2;
+	}
+	
+	FractalGenerator.prototype.drawFractal = function(canvasElem)
+	{
+		var ctx = canvasElem.getContext("2d");
+		var cWidth = canvasElem.clientWidth;
+		var cHeight = canvasElem.clientHeight;
+		//The max distance away from the center
+		for (var y=0;y<cHeight;y++)
+		{
+			var rY = y - cHeight/2;
+			rY = rY/cHeight*2*this.yMax + this.yOff;
+			for (var x=0;x<cWidth;x++)
+			{
+				var rX = x - cWidth/2;
+				rX = rX/cWidth*2*this.xMax + this.xOff;
+				ctx.fillStyle = "black";
+				var cLevel = this.convergeLevel([rX, rY]);
+				if (cLevel == 256)
+					ctx.fillStyle = "black";
+				else
+				{
+					var red = parseInt(255 - cLevel);
+					var green = parseInt(200 - cLevel);
+					var blue = parseInt(cLevel);
+					ctx.fillStyle = "rgb(" + red + "," + green + "," + blue + ")";
+				}
+				
+				ctx.fillRect(x, y, 1, 1);
+			}
+		}
+		
+		if (this.crosshairsOn)
+		{
+			ctx.strokeStyle = "red";
+			ctx.beginPath();
+			ctx.moveTo(cWidth/2, 0);
+			ctx.lineTo(cWidth/2, cHeight);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(0, cHeight/2);
+			ctx.lineTo(cWidth, cHeight/2);
+			ctx.stroke();
+		}
+	}
+
+	FractalGenerator.prototype.mandelIter = function(z, c)
+	{
+		var zSqr = this.multComp(z, z);
+		var total = this.addComp(zSqr, c);
+		return total;
+	}
+	
+	FractalGenerator.prototype.convergeLevel = function(c)
+	{
+		var z = [0, 0];
+		for (var i=0;i<256;i++)
+		{
+			z = this.mandelIter(z, c);
+			if (this.compAbs(z) > 2)
+				return i;
+		}
+		
+		return 256;
+	}
+	
+	FractalGenerator.prototype.addComp = function(z1, z2)
+	{
+		zr = [0, 0];
+		zr[0] = z1[0] + z2[0];
+		zr[1] = z1[1] + z2[1];
+		return zr;
+	}
+	
+	FractalGenerator.prototype.multComp = function(z1, z2)
+	{
+		var realPart = z1[0]*z2[0] - z1[1]*z2[1];
+		var imagPart = z1[0]*z2[1] + z1[1]*z2[0];
+		return [realPart, imagPart];
+	}
+	
+	FractalGenerator.prototype.compAbs = function(z)
+	{
+		return Math.sqrt(z[0]*z[0] + z[1]*z[1]);
+	}
+
+	//Instance of fractal
+	var fractal = new FractalGenerator();
+	
+	function reset()
+	{
+		fractal.reset();
+		showLoading();
+		setTimeout(drawFractal, 100);
+	}
+	
+	function zoomOut()
+	{
+		fractal.zoomOut();
+		showLoading();
+		setTimeout(drawFractal, 100);
+	}
+	
+	function showLoading()
+	{
+		var mandelPos = $("#mandelCanvas").position();
+		$("#fractalLoader").css("display", "inline-block");
+		$("#fractalLoader").css("left", mandelPos.left+1);
+		$("#fractalLoader").css("top", mandelPos.top+1);
+	}
+	
+	function drawFractal()
+	{
+		fractal.drawFractal(mandelElem);
+		$("#fractalLoader").hide();
+	}
+	
+	$("#mandelCanvas").ready(function(){
+		showLoading();
+		setTimeout(drawFractal, 100);
+	});
+	
+	mandelElem = document.getElementById("mandelCanvas");
+	mandelElem.addEventListener('click', function(event){
+		var rect = mandelElem.getBoundingClientRect();
+		var x = event.clientX - rect.left - 2;
+		var y = event.clientY - rect.top - 2;
+		
+		var ctx = mandelElem.getContext("2d");
+		var rX = x - mandelElem.clientWidth/2;
+		var trueX = rX / mandelElem.clientWidth * 2 * fractal.xMax;
+		var rY = y - mandelElem.clientHeight/2;
+		var trueY = rY / mandelElem.clientHeight * 2 * fractal.yMax;
+		
+		fractal.xMax /= 2;
+		fractal.yMax /= 2;
+		fractal.xOff += trueX;
+		fractal.yOff += trueY;
+		showLoading();
+		setTimeout(drawFractal, 100);
+	});
+</script>
+
+
+
